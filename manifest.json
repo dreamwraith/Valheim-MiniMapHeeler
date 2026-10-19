@@ -1,0 +1,9 @@
+{
+  "name": "MiniMapHeeler",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/dreamwraith/Valheim-MiniMapHeeler",
+  "description": "Client-side HUD minimap resizer with 1:1 terrain scaling, expanded zoom range, and clean HUD alignment for Valheim.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2350"
+  ]
+}
