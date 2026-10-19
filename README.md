@@ -9,9 +9,9 @@
 [![Nexus Mods](https://img.shields.io/badge/Nexus_Mods-MiniMapHeeler-da8d24?logo=nexusmods)](https://www.nexusmods.com/valheim/mods/4508)
 [![Game: Valheim](https://img.shields.io/badge/Valheim-Deep_North_%2F_1.x-1b2838?logo=steam&logoColor=white)](https://store.steampowered.com/app/892970/Valheim/)
 [![BepInEx Pack](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fthunderstore.io%2Fapi%2Fexperimental%2Fpackage%2Fdenikson%2FBepInExPack_Valheim%2F&query=%24.latest.version_number&label=BepInEx&color=5B57E7)](https://valheim.thunderstore.io/package/denikson/BepInExPack_Valheim/)
-[![Target: .NET 4.8](https://img.shields.io/badge/.NET%20Framework-4.8-512BD4?logo=dotnet)](MiniMapHeeler.csproj)
-[![Client Only](https://img.shields.io/badge/Type-Client%20Only-blue)](README.md#compatibility)
-[![License](https://img.shields.io/github/license/dreamwraith/Valheim-MiniMapHeeler?color=blue)](LICENSE.md)
+[![Target: .NET 4.8](https://img.shields.io/badge/.NET%20Framework-4.8-512BD4?logo=dotnet)](https://github.com/dreamwraith/Valheim-MiniMapHeeler/blob/main/MiniMapHeeler.csproj)
+[![Client Only](https://img.shields.io/badge/Type-Client%20Only-blue)](#compatibility)
+[![License](https://img.shields.io/github/license/dreamwraith/Valheim-MiniMapHeeler?color=blue)](https://github.com/dreamwraith/Valheim-MiniMapHeeler/blob/main/LICENSE.md)
 [![AI Philosophy](https://img.shields.io/badge/AI%20Philosophy-Software%20Craft-2ea44f?logo=github)](https://gist.github.com/dreamwraith/77c91d656c842611bf8c40febf8056f2)
 
 In native Valheim, the HUD minimap is locked to a fixed 200x200 square with a narrow zoom range, offering no way to adjust its size to fit your display or UI preferences. **MiniMapHeeler** unlocks minimap sizing while keeping the surrounding HUD clean and properly aligned.
@@ -95,18 +95,18 @@ If your Valheim installation or mod manager profile uses a non-standard path, co
 
 ## Packaging and Releases
 
-Packaging and release automation are handled through [`.scripts/modtools.ps1`](.scripts/modtools.ps1) using the [**`DW.ValheimModTools`**](https://github.com/DreamWraith/DW-ValheimModTools) module:
+Packaging and release automation are handled through [`.scripts/modtools.ps1`](https://github.com/dreamwraith/Valheim-MiniMapHeeler/blob/main/.scripts/modtools.ps1) using the [**`DW.ValheimModTools`**](https://github.com/DreamWraith/DW-ValheimModTools) module:
 
 - **Create a release:** `pwsh ./.scripts/modtools.ps1 release` (builds Release, creates distribution archives, extracts changelog notes, and creates a GitHub Release).
 - **Bump version and package:** `pwsh ./.scripts/modtools.ps1 package -Bump Patch`
 - **Publish to mod portals:** `pwsh ./.scripts/modtools.ps1 publish -Target All` (uploads to Thunderstore, Hexium, and Nexus Mods).
 
-For full script options and secret configuration, see [`.scripts/README.md`](.scripts/README.md).
+For full script options and secret configuration, see [`.scripts/README.md`](https://github.com/dreamwraith/Valheim-MiniMapHeeler/blob/main/.scripts/README.md).
 
 ---
 
 ## License & Notes
 
-- Licensed under the GNU General Public License v3.0 (see [LICENSE.md](LICENSE.md)).
+- Licensed under the GNU General Public License v3.0 (see [LICENSE.md](https://github.com/dreamwraith/Valheim-MiniMapHeeler/blob/main/LICENSE.md)).
 - [A Note on Valheim Modding](https://gist.github.com/dreamwraith/98564f8441dc234bfadd7e2b605c694c)
 - [A Note on AI and Software Craft](https://gist.github.com/dreamwraith/77c91d656c842611bf8c40febf8056f2)
