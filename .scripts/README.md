@@ -1,6 +1,6 @@
 # Mod Automation, Packaging & Deployment Guide
 
-This directory (`.scripts/`) provides the developer automation interface for initializing mods, managing SemVer versioning, packaging distribution archives, creating GitHub Releases, and deploying to **Thunderstore**, **Hexium**, and **Nexus Mods**.
+This directory (`.scripts/`) provides developer automation tools for managing SemVer versioning, packaging distribution archives, creating GitHub Releases, and deploying to **Thunderstore** and **Nexus Mods**.
 
 Automation logic is powered by the shared PowerShell 7 module [**`DW.ValheimModTools`**](https://github.com/DreamWraith/DW-ValheimModTools).
 
@@ -11,33 +11,15 @@ Automation logic is powered by the shared PowerShell 7 module [**`DW.ValheimModT
 | Script | Purpose |
 | :--- | :--- |
 | `modtools.ps1` | Unified entrypoint and dispatch shim for all release, packaging, and portal publishing commands. Auto-loads `DW.ValheimModTools` from your local clone or GitHub cache. |
-| `init-mod.ps1` | Scaffolding engine to initialize a new mod from this template (automatically configures identifiers, deletes `TEMPLATE.md`, and self-deletes upon completion). |
 
 > [!NOTE]
 > All automation scripts require **PowerShell 7+ (`pwsh`)**.
 
 ---
 
-## 1. Mod Scaffolding (`init-mod.ps1`)
+## 1. Release Management (`modtools.ps1 release`)
 
-When starting a new mod project from this template, run `init-mod.ps1` once to automatically configure project names, C# namespaces, GUIDs, and metadata. Upon successful completion, it automatically deletes `TEMPLATE.md` and deletes itself:
-
-```powershell
-# Interactive mode (prompts for mod name, author, description, optional Nexus mod ID):
-pwsh ./.scripts/init-mod.ps1
-
-# Non-interactive / scripted mode:
-pwsh ./.scripts/init-mod.ps1 -ModName "SeaChestViewer" -Author "MyTeam" -Description "View chest contents from a distance."
-```
-
----
-
-## 2. Release Management (`modtools.ps1 release`)
-
-`modtools.ps1 release` is the recommended all-in-one coordinator for publishing releases. It operates locally against your local Valheim game assemblies and uses the [GitHub CLI (`gh`)](https://cli.github.com/).
-
-### Versioning Workflow: Existing Version (Default) vs. Automated Bump
-By default, `modtools.ps1 release` uses whatever version is currently defined in your `.csproj` without modifying it. This is ideal if you bump `<Version>` manually in your project file and write the corresponding release notes in `CHANGELOG.md` before releasing:
+`modtools.ps1 release` coordinates building, packaging, and publishing releases. It operates locally against your local Valheim game assemblies and uses the [GitHub CLI (`gh`)](https://cli.github.com/).
 
 ```powershell
 # Default: Release using the existing version already in .csproj (creates DRAFT on GitHub)
@@ -46,7 +28,7 @@ pwsh ./.scripts/modtools.ps1 release
 # Optional: Automatically bump patch (e.g. 1.0.0 -> 1.0.1) in .csproj before releasing
 pwsh ./.scripts/modtools.ps1 release -Bump Patch
 
-# Optional: Bump minor (1.0.1 -> 1.1.0) or major (1.1.0 -> 2.0.0)
+# Optional: Bump minor or major
 pwsh ./.scripts/modtools.ps1 release -Bump Minor
 pwsh ./.scripts/modtools.ps1 release -Bump Major
 
@@ -54,7 +36,7 @@ pwsh ./.scripts/modtools.ps1 release -Bump Major
 pwsh ./.scripts/modtools.ps1 release -SetVersion "1.2.0"
 ```
 
-*By default, releases are created in **DRAFT** status on GitHub so you can review notes and attached assets before going live. Publishing triggers the GitHub Action to deploy to Thunderstore, Hexium, and Nexus Mods.*
+*By default, releases are created in **DRAFT** status on GitHub so you can review notes and attached assets before going live. Publishing triggers the GitHub Action to deploy to Thunderstore and Nexus Mods.*
 
 ### Direct Release (Without Draft)
 Pass `-Publish` (or `-NoDraft`) to create a published release immediately:
@@ -67,43 +49,24 @@ pwsh ./.scripts/modtools.ps1 release -Bump Patch -Publish
 pwsh ./.scripts/modtools.ps1 release -Bump Patch -DryRun
 ```
 
-### Parameters Reference (`modtools.ps1 release`)
-
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `-Bump` | `Patch`, `Minor`, `Major` | *None* | Increments SemVer in `.csproj` before building. |
-| `-SetVersion` | `string` | *None* | Explicit version string to assign before building. |
-| `-Publish` / `-NoDraft` | `switch` | `false` | Publishes the release immediately instead of creating a Draft. |
-| `-Configuration` | `string` | `Release` | Target build configuration. |
-| `-DryRun` | `switch` | `false` | Assembles packages and previews the `gh release create` command without executing it. |
-
 ---
 
-## 3. Packaging & Version Bumping (`modtools.ps1 package`)
-
-`modtools.ps1 package` handles standalone packaging, semantic version bumping, and source archive creation:
+## 2. Packaging & Version Bumping (`modtools.ps1 package`)
 
 ```powershell
 # Bump version in .csproj and manifest.json without releasing
 pwsh ./.scripts/modtools.ps1 package -Bump Patch
-pwsh ./.scripts/modtools.ps1 package -SetVersion "1.1.0"
 
 # Assemble distribution zip for current build
 pwsh ./.scripts/modtools.ps1 package
-```
 
-### Single Source of Truth (SSOT) Versioning
-Version numbers are maintained in exactly one place: the `<Version>` tag in your `.csproj` file.
-When building or packaging:
-1. **In-Code Plugin Version**: The `GenerateVersionInfo` MSBuild target emits `obj/VersionInfo.g.cs` containing `VersionInfo.Version`. `Plugin.cs` references this directly.
-2. **Manifest Sync**: `manifest.json` is automatically updated with the current version and project metadata.
-3. **Release Notes**: Notes matching the version section in `CHANGELOG.md` are extracted to `bin/Publish/release_notes.md`.
+# Assemble package and generate a source archive
+pwsh ./.scripts/modtools.ps1 package -CreateSourceArchive
+```
 
 ---
 
-## 4. Direct Portal Publishing (`modtools.ps1 publish`)
-
-If you want to publish directly to Thunderstore, Hexium, or Nexus Mods from your local terminal without GitHub Releases:
+## 3. Direct Portal Publishing (`modtools.ps1 publish`)
 
 ```powershell
 # Publish to all configured portals
@@ -111,7 +74,6 @@ pwsh ./.scripts/modtools.ps1 publish -Target All
 
 # Publish to a single portal
 pwsh ./.scripts/modtools.ps1 publish -Target Thunderstore
-pwsh ./.scripts/modtools.ps1 publish -Target Hexium
 pwsh ./.scripts/modtools.ps1 publish -Target Nexus
 
 # Dry-run validation
@@ -119,33 +81,23 @@ pwsh ./.scripts/modtools.ps1 publish -Target All -DryRun
 ```
 
 ### Direct Platform Commands
-- **Thunderstore**:
-  ```powershell
-  pwsh ./.scripts/modtools.ps1 thunderstore
-  ```
-- **Hexium**:
-  ```powershell
-  pwsh ./.scripts/modtools.ps1 hexium
-  ```
-- **Nexus Mods**:
-  ```powershell
-  pwsh ./.scripts/modtools.ps1 nexus
-  ```
+- **Thunderstore**: `pwsh ./.scripts/modtools.ps1 thunderstore`
+- **Nexus Mods**: `pwsh ./.scripts/modtools.ps1 nexus`
 
 ---
 
-## 5. How `DW.ValheimModTools` Integration Works
+## 4. How `DW.ValheimModTools` Integration Works
 
 `modtools.ps1` resolves the shared PowerShell 7 module dynamically:
-1. **Local Developer Copy First**: If you have cloned `DW-ValheimModTools` to `~/source/DW-ValheimModTools`, `modtools.ps1` immediately imports it from source. Any improvements or bugfixes made to `DW-ValheimModTools` are instantly live across all your mods without any install step.
-2. **System-Installed Module**: Checks if `DW.ValheimModTools` is in `$env:PSModulePath`.
-3. **GitHub Cache Fallback**: If running on a new machine or in CI, it automatically clones or fast-pulls `main` from `https://github.com/DreamWraith/DW-ValheimModTools.git` into `%LOCALAPPDATA%\DW-ValheimModTools`.
-
+1. **Explicit Environment Override**: If `$env:MODTOOLS_PATH` or `$env:DW_VALHEIM_MODTOOLS_PATH` is set, `modtools.ps1` loads that copy directly.
+2. **Sibling Repository (Workspace Relative)**: If `DW-ValheimModTools` is cloned in the same parent workspace directory alongside your mod repository, it imports it directly from source.
+3. **System-Installed Module**: Checks if `DW.ValheimModTools` is installed in `$env:PSModulePath`.
+4. **GitHub Cache Fallback**: If running on a clean machine or in CI, it automatically clones or fast-pulls `master` from `https://github.com/DreamWraith/DW-ValheimModTools.git` into your local cache directory (`%LOCALAPPDATA%\DW-ValheimModTools` on Windows or `~/.cache/DW-ValheimModTools` on Linux/macOS).
 ---
 
-## 6. GitHub Actions CI/CD Workflow
+## 5. GitHub Actions CI/CD Workflow
 
-An automated portal publisher workflow is provided at [`.github/workflows/publish.yml.example`](../.github/workflows/publish.yml.example).
+An automated portal publisher workflow is located at [`.github/workflows/publish.yml`](../.github/workflows/publish.yml).
 
 ### Required & Optional GitHub Secrets
 
@@ -153,8 +105,7 @@ Configure these under **Settings > Secrets and variables > Actions**:
 
 | Secret / Variable | Required | Description |
 | :--- | :--- | :--- |
-| `COMMUNITY_NAMESPACE` | Recommended | Mod author or team namespace for Thunderstore and Hexium (e.g., `MyTeam`). |
-| `THUNDERSTORE_TOKEN` | Optional | Service account token from [thunderstore.io](https://thunderstore.io). |
-| `HEXIUM_TOKEN` | Optional | API token from [hexium.gg](https://hexium.gg). |
-| `NEXUSMODS_API_KEY` | Optional | Personal account API key from [nexusmods.com](https://www.nexusmods.com/users/myaccount?tab=api+keys). (Mod ID is read automatically from `<NexusModId>` in your `.csproj`). |
-| `COMMUNITY` | Optional | Community slug on Thunderstore/Hexium (defaults to `valheim`). |
+| COMMUNITY_NAMESPACE | Recommended | Mod author or team namespace for Thunderstore (e.g., DreamWraith). |
+| THUNDERSTORE_TOKEN | Optional | Service account token from [thunderstore.io](https://thunderstore.io). |
+| NEXUSMODS_API_KEY | Optional | Personal account API key from [nexusmods.com](https://www.nexusmods.com/users/myaccount?tab=api+keys). (Mod ID is read automatically from <NexusModId> in your .csproj). |
+| COMMUNITY | Optional | Community slug on Thunderstore (defaults to valheim). |

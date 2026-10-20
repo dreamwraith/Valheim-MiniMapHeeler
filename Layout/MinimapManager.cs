@@ -1,5 +1,4 @@
 using System;
-using HarmonyLib;
 using MiniMapHeeler.Configuration;
 using MiniMapHeeler.Patches;
 using UnityEngine;
@@ -22,12 +21,6 @@ namespace MiniMapHeeler.Layout
         public static bool HudInitialized;
         private static bool s_capturedMinimapDefaults;
         private static bool s_capturedHudDefaults;
-
-        private static readonly Action<Minimap>? s_updatePinsDelegate =
-            AccessTools.MethodDelegate<Action<Minimap>>(AccessTools.Method(typeof(Minimap), "UpdatePins"));
-
-        private static readonly AccessTools.FieldRef<Minimap, bool> s_pinUpdateRequiredRef =
-            AccessTools.FieldRefAccess<Minimap, bool>("m_pinUpdateRequired");
 
         public static void InitializeMinimap(Minimap minimapInstance)
         {
@@ -109,8 +102,7 @@ namespace MiniMapHeeler.Layout
             float targetWidth = Mathf.Max(50f, ModConfig.MinimapWidth.Value);
             float targetHeight = Mathf.Max(50f, ModConfig.MinimapHeight.Value);
 
-            RectTransform rootRectTransform = Minimap.instance.m_smallRoot.GetComponent<RectTransform>();
-            if (rootRectTransform == null)
+            if (!Minimap.instance.m_smallRoot.TryGetComponent(out RectTransform rootRectTransform))
             {
                 return;
             }
@@ -133,7 +125,7 @@ namespace MiniMapHeeler.Layout
                 );
             }
 
-            if (HudInitialized && Hud.instance != null && Hud.instance.m_statusEffectListRoot != null)
+            if (HudInitialized && Hud.instance && Hud.instance.m_statusEffectListRoot)
             {
                 if (ModConfig.ShiftBelowStatusEffects.Value)
                 {
@@ -153,7 +145,7 @@ namespace MiniMapHeeler.Layout
                 }
             }
 
-            if (Minimap.instance.m_windMarker != null)
+            if (Minimap.instance.m_windMarker)
             {
                 float mapHalfWidth = (targetWidth - NativeMapPadding) / 2f;
                 float mapHalfHeight = (targetHeight - NativeMapPadding) / 2f;
@@ -167,25 +159,25 @@ namespace MiniMapHeeler.Layout
             float innerMapHeight = targetHeight - NativeMapPadding;
             UpdateViewportUv(Minimap.instance, innerMapWidth, innerMapHeight);
 
-            s_pinUpdateRequiredRef(Minimap.instance) = true;
+            Minimap.instance.m_pinUpdateRequired = true;
             RefreshPins();
 
             Plugin.LogDebug(
                 $"Layout applied: size=({targetWidth:F0}x{targetHeight:F0}), pos={rootRectTransform.anchoredPosition}, " +
-                $"statusPos={(Hud.instance?.m_statusEffectListRoot != null ? Hud.instance.m_statusEffectListRoot.anchoredPosition.ToString() : "N/A")}, " +
+                $"statusPos={(Hud.instance && Hud.instance.m_statusEffectListRoot ? Hud.instance.m_statusEffectListRoot.anchoredPosition.ToString() : "N/A")}, " +
                 $"shiftBelow={ModConfig.ShiftBelowStatusEffects.Value}");
         }
 
         public static void RefreshPins()
         {
-            if (!MinimapInitialized || Minimap.instance == null)
+            if (!MinimapInitialized || !Minimap.instance)
             {
                 return;
             }
 
             try
             {
-                s_updatePinsDelegate?.Invoke(Minimap.instance);
+                Minimap.instance.UpdatePins();
             }
             catch (Exception exception)
             {
@@ -196,16 +188,15 @@ namespace MiniMapHeeler.Layout
 
         public static void RestoreDefaults()
         {
-            if (MinimapInitialized && Minimap.instance != null && Minimap.instance.m_smallRoot != null)
+            if (MinimapInitialized && Minimap.instance && Minimap.instance.m_smallRoot)
             {
-                RectTransform rootRectTransform = Minimap.instance.m_smallRoot.GetComponent<RectTransform>();
-                if (rootRectTransform != null)
+                if (Minimap.instance.m_smallRoot.TryGetComponent(out RectTransform rootRectTransform))
                 {
                     rootRectTransform.sizeDelta = BaseRootSize;
                     rootRectTransform.anchoredPosition = BaseRootPosition;
                 }
 
-                if (Minimap.instance.m_windMarker != null)
+                if (Minimap.instance.m_windMarker)
                 {
                     Minimap.instance.m_windMarker.anchoredPosition = BaseWindPosition;
                 }
@@ -213,11 +204,11 @@ namespace MiniMapHeeler.Layout
                 Minimap.instance.SmallZoom = 0.01f;
                 UpdateViewportUv(Minimap.instance, NativeMapInnerSize, NativeMapInnerSize);
 
-                s_pinUpdateRequiredRef(Minimap.instance) = true;
+                Minimap.instance.m_pinUpdateRequired = true;
                 RefreshPins();
             }
 
-            if (HudInitialized && Hud.instance != null && Hud.instance.m_statusEffectListRoot != null)
+            if (HudInitialized && Hud.instance && Hud.instance.m_statusEffectListRoot)
             {
                 Hud.instance.m_statusEffectListRoot.anchoredPosition = BaseStatusPosition;
             }

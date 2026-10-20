@@ -12,9 +12,6 @@ namespace MiniMapHeeler.Patches
         public const float HardcodedMinZoom = 0.002f;
         public const float HardcodedMaxZoom = 1.0f;
 
-        private static readonly AccessTools.FieldRef<Minimap, float> s_smallZoomFieldRef =
-            AccessTools.FieldRefAccess<Minimap, float>("m_smallZoom");
-
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Minimap.SmallZoom), MethodType.Setter)]
         private static bool SetSmallZoomPrefix(Minimap __instance, ref float value)
@@ -33,7 +30,7 @@ namespace MiniMapHeeler.Patches
             if (isZoomIn)
             {
                 float newZoom = Mathf.Clamp(current / 1.5f, HardcodedMinZoom, HardcodedMaxZoom);
-                s_smallZoomFieldRef(__instance) = newZoom;
+                __instance.m_smallZoom = newZoom;
                 Plugin.LogDebug($"Zoom in: {current:F4} -> {newZoom:F4}");
                 return false;
             }
@@ -41,12 +38,12 @@ namespace MiniMapHeeler.Patches
             if (isZoomOut)
             {
                 float newZoom = Mathf.Clamp(current * 1.5f, HardcodedMinZoom, HardcodedMaxZoom);
-                s_smallZoomFieldRef(__instance) = newZoom;
+                __instance.m_smallZoom = newZoom;
                 Plugin.LogDebug($"Zoom out: {current:F4} -> {newZoom:F4}");
                 return false;
             }
 
-            s_smallZoomFieldRef(__instance) = Mathf.Clamp(value, HardcodedMinZoom, HardcodedMaxZoom);
+            __instance.m_smallZoom = Mathf.Clamp(value, HardcodedMinZoom, HardcodedMaxZoom);
             return false;
         }
 
@@ -68,10 +65,10 @@ namespace MiniMapHeeler.Patches
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch("CenterMap", typeof(Vector3))]
+        [HarmonyPatch(nameof(Minimap.CenterMap), typeof(Vector3))]
         private static void CenterMapPostfix(Minimap __instance, Vector3 centerPoint)
         {
-            if (!ModConfig.EnableMod.Value || __instance.m_mode != Minimap.MapMode.Small || __instance.m_mapImageSmall == null)
+            if (!ModConfig.EnableMod.Value || __instance.m_mode != Minimap.MapMode.Small || !__instance.m_mapImageSmall)
             {
                 return;
             }
