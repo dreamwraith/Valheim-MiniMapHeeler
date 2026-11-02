@@ -54,7 +54,7 @@ namespace MiniMapHeeler.Configuration
                 "3 - HUD Placement",
                 "PositionOffsetX",
                 0.0f,
-                "Horizontal offset in canvas UI units from default position.",
+                "Horizontal offset in canvas UI units from default position. Status effect icons follow this offset only when ShiftBelowStatusEffects is off.",
                 new AcceptableValueRange<float>(-1920.0f, 1920.0f)
             );
 
@@ -63,7 +63,7 @@ namespace MiniMapHeeler.Configuration
                 "3 - HUD Placement",
                 "PositionOffsetY",
                 0.0f,
-                "Vertical offset in canvas UI units from default position.",
+                "Vertical offset in canvas UI units. Measured from the default position, or from the shifted position when ShiftBelowStatusEffects is on.",
                 new AcceptableValueRange<float>(-1080.0f, 1080.0f)
             );
 

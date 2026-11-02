@@ -11,9 +11,9 @@
     <Version>1.1.0</Version>
     <PackageWebsiteUrl>https://github.com/dreamwraith/Valheim-MiniMapHeeler</PackageWebsiteUrl>
     <PackageDescription>Client-side HUD minimap resizer with 1:1 terrain scaling, expanded zoom range, and clean HUD alignment for Valheim.</PackageDescription>
-    <Authors>dreamwraith</Authors>
-    <Company>dreamwraith (https://github.com/dreamwraith)</Company>
-    <Copyright>Copyright (c) 2026 dreamwraith</Copyright>
+    <Authors>DreamWraith</Authors>
+    <Company>DreamWraith (https://github.com/dreamwraith)</Company>
+    <Copyright>Copyright (c) 2026 DreamWraith</Copyright>
     <Description>$(PackageDescription)</Description>
     <PackageProjectUrl>https://github.com/dreamwraith/Valheim-MiniMapHeeler</PackageProjectUrl>
     <RepositoryUrl>https://github.com/dreamwraith/Valheim-MiniMapHeeler</RepositoryUrl>
