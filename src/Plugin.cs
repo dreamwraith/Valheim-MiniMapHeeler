@@ -3,6 +3,8 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using MiniMapHeeler.Configuration;
+using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace MiniMapHeeler
 {
@@ -23,6 +25,12 @@ namespace MiniMapHeeler
             Log = Logger;
 
             ModConfig.Initialize(Config);
+
+            // same check as jotunns GUIManager.IsHeadless(), jotunn isnt here at runtime
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            {
+                return;
+            }
 
             _harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), ModGUID);
             Log.LogInfo($"{ModName} v{ModVersion} loaded successfully.");
