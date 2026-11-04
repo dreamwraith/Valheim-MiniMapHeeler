@@ -26,17 +26,17 @@ namespace MiniMapHeeler.Layout
         {
             if (!s_capturedMinimapDefaults)
             {
-                if (minimapInstance.m_smallRoot != null)
+                if (minimapInstance.m_smallRoot)
                 {
                     RectTransform rootRectTransform = minimapInstance.m_smallRoot.GetComponent<RectTransform>();
-                    if (rootRectTransform != null)
+                    if (rootRectTransform)
                     {
                         BaseRootPosition = rootRectTransform.anchoredPosition;
                         BaseRootSize = rootRectTransform.sizeDelta;
                     }
                 }
 
-                if (minimapInstance.m_windMarker != null)
+                if (minimapInstance.m_windMarker)
                 {
                     BaseWindPosition = minimapInstance.m_windMarker.anchoredPosition;
                 }
@@ -57,7 +57,7 @@ namespace MiniMapHeeler.Layout
         {
             if (!s_capturedHudDefaults)
             {
-                if (hudInstance.m_statusEffectListRoot != null)
+                if (hudInstance.m_statusEffectListRoot)
                 {
                     BaseStatusPosition = hudInstance.m_statusEffectListRoot.anchoredPosition;
                 }
@@ -71,13 +71,21 @@ namespace MiniMapHeeler.Layout
 
         public static void UpdateViewportUv(Minimap minimapInstance, float innerWidth, float innerHeight, Vector3? centerWorldPosition = null)
         {
-            if (minimapInstance == null || minimapInstance.m_mapImageSmall == null)
+            if (!minimapInstance || !minimapInstance.m_mapImageSmall)
             {
                 return;
             }
 
-            Vector3 worldPosition = centerWorldPosition ?? (Player.m_localPlayer != null ? Player.m_localPlayer.transform.position : Vector3.zero);
-            minimapInstance.WorldToMapPoint(worldPosition, out var mapPointX, out var mapPointY);
+            Vector3 worldPosition = Vector3.zero;
+            if (centerWorldPosition.HasValue)
+            {
+                worldPosition = centerWorldPosition.Value;
+            }
+            else if (Player.m_localPlayer)
+            {
+                worldPosition = Player.m_localPlayer.transform.position;
+            }
+            minimapInstance.WorldToMapPoint(worldPosition, out float mapPointX, out float mapPointY);
 
             Rect uvRectangle = minimapInstance.m_mapImageSmall.uvRect;
             uvRectangle.width = minimapInstance.SmallZoom * (innerWidth / NativeMapInnerSize);
@@ -88,7 +96,7 @@ namespace MiniMapHeeler.Layout
 
         public static void ApplyLayout()
         {
-            if (!MinimapInitialized || Minimap.instance == null || Minimap.instance.m_smallRoot == null)
+            if (!MinimapInitialized || !Minimap.instance || !Minimap.instance.m_smallRoot)
             {
                 return;
             }

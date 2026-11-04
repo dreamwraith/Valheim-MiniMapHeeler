@@ -43,7 +43,7 @@ namespace MiniMapHeeler
 
         internal static void LogDebug(string message)
         {
-            if (ModConfig.EnableDebugLogs != null && ModConfig.EnableDebugLogs.Value)
+            if (ModConfig.EnableDebugLogs.Value)
             {
                 Log.LogInfo($"[DEBUG] {message}");
             }
