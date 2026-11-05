@@ -12,5 +12,12 @@ namespace MiniMapHeeler.Patches
         {
             MinimapManager.InitializeHud(__instance);
         }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Hud.LateUpdate))]
+        private static void LateUpdatePostfix(Hud __instance)
+        {
+            HudLayoutTracker.CheckForChanges(__instance);
+        }
     }
 }

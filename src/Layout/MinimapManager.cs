@@ -11,7 +11,7 @@ namespace MiniMapHeeler.Layout
         public static Vector2 BaseRootPosition = new Vector2(-40f, -40f);
         public static Vector2 BaseStatusPosition = new Vector2(-271f, -45f);
         public static Vector2 BaseWindPosition = new Vector2(-78f, -78f);
-        public const float HardcodedStatusEffectsClearance = 220.0f;
+        public const float HardcodedStatusRowsGap = 20.0f;
 
         public const float NativeMapPadding = 12.0f;
         public const float NativeMapInnerSize = 188.0f;
@@ -61,6 +61,7 @@ namespace MiniMapHeeler.Layout
                 {
                     BaseStatusPosition = hudInstance.m_statusEffectListRoot.anchoredPosition;
                 }
+                ShipHudLayout.CaptureDefaults(hudInstance);
                 s_capturedHudDefaults = true;
                 Plugin.LogDebug($"HUD defaults captured: BaseStatusPosition={BaseStatusPosition}");
             }
@@ -96,7 +97,7 @@ namespace MiniMapHeeler.Layout
 
         public static void ApplyLayout()
         {
-            if (!MinimapInitialized || !Minimap.instance || !Minimap.instance.m_smallRoot)
+            if (!TryGetMinimapRoot(out RectTransform rootRectTransform))
             {
                 return;
             }
@@ -110,48 +111,8 @@ namespace MiniMapHeeler.Layout
             float targetWidth = Mathf.Max(50f, ModConfig.MinimapWidth.Value);
             float targetHeight = Mathf.Max(50f, ModConfig.MinimapHeight.Value);
 
-            if (!Minimap.instance.m_smallRoot.TryGetComponent(out RectTransform rootRectTransform))
-            {
-                return;
-            }
-
             rootRectTransform.sizeDelta = new Vector2(targetWidth, targetHeight);
-
-            if (ModConfig.ShiftBelowStatusEffects.Value && HudInitialized)
-            {
-                float verticalPosition = BaseStatusPosition.y - HardcodedStatusEffectsClearance + ModConfig.PositionOffsetY.Value;
-                rootRectTransform.anchoredPosition = new Vector2(
-                    BaseRootPosition.x + ModConfig.PositionOffsetX.Value,
-                    verticalPosition
-                );
-            }
-            else
-            {
-                rootRectTransform.anchoredPosition = new Vector2(
-                    BaseRootPosition.x + ModConfig.PositionOffsetX.Value,
-                    BaseRootPosition.y + ModConfig.PositionOffsetY.Value
-                );
-            }
-
-            if (HudInitialized && Hud.instance && Hud.instance.m_statusEffectListRoot)
-            {
-                if (ModConfig.ShiftBelowStatusEffects.Value)
-                {
-                    Hud.instance.m_statusEffectListRoot.anchoredPosition = new Vector2(
-                        BaseRootPosition.x,
-                        BaseStatusPosition.y
-                    );
-                }
-                else
-                {
-                    float minimapLeftEdge = (BaseRootPosition.x + ModConfig.PositionOffsetX.Value) - targetWidth;
-                    float statusEffectsPositionX = minimapLeftEdge - NativeStatusGap;
-                    Hud.instance.m_statusEffectListRoot.anchoredPosition = new Vector2(
-                        statusEffectsPositionX,
-                        BaseStatusPosition.y
-                    );
-                }
-            }
+            PlaceHudElements(rootRectTransform);
 
             if (Minimap.instance.m_windMarker)
             {
@@ -170,10 +131,66 @@ namespace MiniMapHeeler.Layout
             Minimap.instance.m_pinUpdateRequired = true;
             RefreshPins();
 
+            Plugin.LogDebug($"Layout applied: size=({targetWidth:F0}x{targetHeight:F0})");
+        }
+
+        public static void ApplyPositions()
+        {
+            if (ModConfig.EnableMod.Value && TryGetMinimapRoot(out RectTransform rootRectTransform))
+            {
+                PlaceHudElements(rootRectTransform);
+            }
+        }
+
+        private static void PlaceHudElements(RectTransform rootRectTransform)
+        {
+            MinimapPlacementMode minimapPlacement = ModConfig.MinimapPlacement.Value;
+            ShipHudPlacementMode shipHudPlacement = ModConfig.ShipHudPlacement.Value;
+            bool shipHudShowing = HudLayoutTracker.ShipHudShowing;
+
+            // detached measures from the screen top right corner, which is 0,0 in this space
+            Vector2 minimapPosition = minimapPlacement == MinimapPlacementMode.DetachedFreeMovement
+                ? Vector2.zero
+                : BaseRootPosition;
+
+            if (minimapPlacement == MinimapPlacementMode.ShiftBelowStatusEffects && HudReady && HudLayoutTracker.StatusRowCount > 0)
+            {
+                float statusRowsHeight = HudLayoutTracker.StatusRowCount * Hud.instance.m_statusEffectSpacing;
+                minimapPosition.y = BaseStatusPosition.y - statusRowsHeight - HardcodedStatusRowsGap;
+            }
+
+            if (shipHudShowing && shipHudPlacement == ShipHudPlacementMode.AboveMinimap)
+            {
+                // ship hud row takes over the old minimap top while steering
+                minimapPosition.y -= ShipHudLayout.GetScaledSize().y;
+            }
+
+            rootRectTransform.anchoredPosition = minimapPosition + new Vector2(ModConfig.MinimapOffsetX.Value, ModConfig.MinimapOffsetY.Value);
+
+            if (!HudReady)
+            {
+                return;
+            }
+
+            Rect shipHudRect = ShipHudLayout.Apply(Hud.instance, rootRectTransform);
+
+            // in Default status icons sit left of the minimap, or left of the ship hud column while steering in that mode,
+            // the other minimap modes put them on the right screen edge
+            float statusEffectsRightEdge = shipHudShowing && shipHudPlacement == ShipHudPlacementMode.LeftOfMinimap
+                ? shipHudRect.xMin
+                : rootRectTransform.anchoredPosition.x - rootRectTransform.sizeDelta.x;
+            float statusEffectsPositionX = minimapPlacement == MinimapPlacementMode.Default
+                ? statusEffectsRightEdge - NativeStatusGap
+                : BaseRootPosition.x;
+
+            if (Hud.instance.m_statusEffectListRoot)
+            {
+                Hud.instance.m_statusEffectListRoot.anchoredPosition = new Vector2(statusEffectsPositionX, BaseStatusPosition.y);
+            }
+
             Plugin.LogDebug(
-                $"Layout applied: size=({targetWidth:F0}x{targetHeight:F0}), pos={rootRectTransform.anchoredPosition}, " +
-                $"statusPos={(Hud.instance && Hud.instance.m_statusEffectListRoot ? Hud.instance.m_statusEffectListRoot.anchoredPosition.ToString() : "N/A")}, " +
-                $"shiftBelow={ModConfig.ShiftBelowStatusEffects.Value}");
+                $"HUD positions applied: minimap={rootRectTransform.anchoredPosition}, statusX={statusEffectsPositionX:F0}, " +
+                $"statusRows={HudLayoutTracker.StatusRowCount}, shipHudShowing={shipHudShowing}, minimapPlacement={minimapPlacement}");
         }
 
         public static void RefreshPins()
@@ -196,13 +213,10 @@ namespace MiniMapHeeler.Layout
 
         public static void RestoreDefaults()
         {
-            if (MinimapInitialized && Minimap.instance && Minimap.instance.m_smallRoot)
+            if (TryGetMinimapRoot(out RectTransform rootRectTransform))
             {
-                if (Minimap.instance.m_smallRoot.TryGetComponent(out RectTransform rootRectTransform))
-                {
-                    rootRectTransform.sizeDelta = BaseRootSize;
-                    rootRectTransform.anchoredPosition = BaseRootPosition;
-                }
+                rootRectTransform.sizeDelta = BaseRootSize;
+                rootRectTransform.anchoredPosition = BaseRootPosition;
 
                 if (Minimap.instance.m_windMarker)
                 {
@@ -216,12 +230,25 @@ namespace MiniMapHeeler.Layout
                 RefreshPins();
             }
 
-            if (HudInitialized && Hud.instance && Hud.instance.m_statusEffectListRoot)
+            if (HudReady)
             {
-                Hud.instance.m_statusEffectListRoot.anchoredPosition = BaseStatusPosition;
+                if (Hud.instance.m_statusEffectListRoot)
+                {
+                    Hud.instance.m_statusEffectListRoot.anchoredPosition = BaseStatusPosition;
+                }
+
+                ShipHudLayout.Restore(Hud.instance);
             }
 
             Plugin.LogDebug("Restored native minimap and HUD layout defaults.");
+        }
+
+        private static bool HudReady => HudInitialized && Hud.instance;
+
+        private static bool TryGetMinimapRoot(out RectTransform rootRectTransform)
+        {
+            rootRectTransform = null!;
+            return MinimapInitialized && Minimap.instance && Minimap.instance.m_smallRoot.TryGetComponent(out rootRectTransform);
         }
     }
 }

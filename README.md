@@ -21,9 +21,10 @@ This mod runs client-side on your local HUD. It does not need to be installed on
 
 ## Features
 
-- **Custom dimensions:** Freely adjust width (100-1920) and height (100-1080) larger or smaller without texture distortion.
+- **Custom dimensions:** Freely adjust width (100-5000) and height (100-3000) larger or smaller without texture distortion.
 - **Wider zoom range:** Zooms in up to 5x further than the base game, with even steps in both directions, on the HUD minimap only. The minimap starts wider than the base game, showing about 1.5x more terrain. Zoom limits are not configurable.
-- **HUD alignment:** Automatically offsets status effect icons and the wind marker to prevent overlap, with an optional layout to place the minimap below them.
+- **HUD alignment:** Moves status effect icons and the wind marker out of the way of the resized minimap. Status effects can also sit at the right screen edge with the minimap below them, following however many rows you have, or you can detach the minimap and put it anywhere on screen.
+- **Ship HUD placement:** The speed icon and wind indicator you get while steering follow the minimap. Keep the base game stack, put them side by side under or above the minimap, stack them to its left, or detach them anywhere on screen, and shrink them down to a quarter size.
 - **Live in-game tuning:** Settings changed in BepInEx Configuration Manager (`F1`) apply immediately without restarting.
 - **Client-side only:** Safe for local worlds and multiplayer servers with no server installation needed.
 
@@ -31,16 +32,20 @@ This mod runs client-side on your local HUD. It does not need to be installed on
 
 ## Configuration
 
-Settings can be changed in-game using the BepInEx Configuration Manager (`F1`, installed separately) or by editing `BepInEx/config/dreamwraith.MiniMapHeeler.cfg`:
+Settings can be changed in-game using the BepInEx Configuration Manager (`F1`, installed separately) or by editing `BepInEx/config/dreamwraith.MiniMapHeeler.cfg`. Settings from 1.1.x move to their new names on the first launch, and the old lines are removed from the config file.
 
 | Section | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `1 - General` | `EnableMod` | `bool` | `true` | Enable or disable the mod. Off restores the base game size, position, and zoom immediately. |
-| `2 - Dimensions` | `MinimapWidth` | `float` | `200.0` | Minimap width in UI units (range: 100 - 1920, native default is 200; scales with UI scale). |
-| `2 - Dimensions` | `MinimapHeight` | `float` | `200.0` | Minimap height in UI units (range: 100 - 1080, native default is 200; scales with UI scale). |
-| `3 - HUD Placement` | `ShiftBelowStatusEffects` | `bool` | `false` | When true, aligns status effects to the right edge and places the minimap below them. |
-| `3 - HUD Placement` | `PositionOffsetX` | `float` | `0.0` | Horizontal offset in UI units from default position (range: -1920 - 1920). Status effect icons follow this offset only when `ShiftBelowStatusEffects` is off. |
-| `3 - HUD Placement` | `PositionOffsetY` | `float` | `0.0` | Vertical offset in UI units (range: -1080 - 1080). Measured from the default position, or from the shifted position when `ShiftBelowStatusEffects` is on. |
+| `2 - Minimap` | `MinimapPlacement` | `enum` | `Default` | `Default` keeps status effect icons to the left of the minimap. `ShiftBelowStatusEffects` moves them to the right screen edge and places the minimap below them, following the number of icon rows. `DetachedFreeMovement` also moves them to the right screen edge and places the minimap only with its offsets, measured from the top right screen corner. |
+| `2 - Minimap` | `MinimapWidth` | `float` | `200.0` | Minimap width in UI units (range: 100 - 5000, base game default is 200; scales with UI scale). |
+| `2 - Minimap` | `MinimapHeight` | `float` | `200.0` | Minimap height in UI units (range: 100 - 3000, base game default is 200; scales with UI scale). |
+| `2 - Minimap` | `MinimapOffsetX` | `float` | `0.0` | Horizontal offset in UI units (range: -5000 - 5000). Measured from the default position, or from the top right screen corner in `DetachedFreeMovement`. Status effect icons follow this offset only in `Default`. |
+| `2 - Minimap` | `MinimapOffsetY` | `float` | `0.0` | Vertical offset in UI units (range: -3000 - 3000). Measured from the default position, from the shifted position in `ShiftBelowStatusEffects`, or from the top right screen corner in `DetachedFreeMovement`. |
+| `3 - Ship HUD` | `ShipHudPlacement` | `enum` | `Default` | Position of the ship speed icon and wind indicator while steering. `Default` keeps the base game stack below the minimap. `BelowMinimap` and `AboveMinimap` place them side by side, and `AboveMinimap` moves the minimap down while steering to make room. `LeftOfMinimap` stacks them left of the minimap, level with its top, and in the `Default` minimap placement the status effect icons move left while steering to clear them. `FullyDetachedVertical` (stacked) and `FullyDetachedHorizontal` (side by side) do not follow the minimap and use only the ship HUD offsets. |
+| `3 - Ship HUD` | `ShipHudScale` | `float` | `0.75` | Size of the ship speed icon and wind indicator (range: 0.25 - 1.0, 1.0 is the base game size). |
+| `3 - Ship HUD` | `ShipHudOffsetX` | `float` | `0.0` | Horizontal offset in UI units (range: -5000 - 5000). Measured from the default position of the selected `ShipHudPlacement`, or from the top right screen corner in the fully detached modes. |
+| `3 - Ship HUD` | `ShipHudOffsetY` | `float` | `0.0` | Vertical offset in UI units (range: -3000 - 3000). Measured from the same point as `ShipHudOffsetX`. |
 | `9 - Debug` | `EnableDebugLogs` | `bool` | `false` | Enable verbose diagnostic logging in console and Player.log (visible when Advanced settings is on). |
 
 ---
