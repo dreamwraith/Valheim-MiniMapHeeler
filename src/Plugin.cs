@@ -15,13 +15,11 @@ namespace MiniMapHeeler
         public const string ModName = "MiniMapHeeler";
         public const string ModVersion = VersionInfo.Version;
 
-        internal static Plugin? Instance { get; private set; }
-        internal static ManualLogSource Log = null!;
+        internal static ManualLogSource Log { get; private set; } = null!;
         private Harmony? _harmony;
 
         private void Awake()
         {
-            Instance = this;
             Log = Logger;
 
             ModConfig.Initialize(Config);
@@ -43,7 +41,7 @@ namespace MiniMapHeeler
 
         internal static void LogDebug(string message)
         {
-            if (ModConfig.EnableDebugLogs.Value)
+            if (ModConfig.Instance.EnableDebugLogs.Value)
             {
                 Log.LogInfo($"[DEBUG] {message}");
             }

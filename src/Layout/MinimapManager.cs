@@ -1,54 +1,46 @@
-using System;
 using MiniMapHeeler.Configuration;
-using MiniMapHeeler.Patches;
 using UnityEngine;
 
 namespace MiniMapHeeler.Layout
 {
     internal static class MinimapManager
     {
-        public static Vector2 BaseRootSize = new Vector2(200f, 200f);
-        public static Vector2 BaseRootPosition = new Vector2(-40f, -40f);
-        public static Vector2 BaseStatusPosition = new Vector2(-271f, -45f);
-        public static Vector2 BaseWindPosition = new Vector2(-78f, -78f);
-        public const float HardcodedStatusRowsGap = 20.0f;
+        private const float HardcodedDefaultZoom = 0.015f;
+        private const float HardcodedMinZoom = 0.002f;
+        private const float HardcodedMaxZoom = 1.0f;
+        private const float HardcodedStatusRowsGap = 20.0f;
 
-        public const float NativeMapPadding = 12.0f;
-        public const float NativeMapInnerSize = 188.0f;
-        public const float NativeStatusGap = 31.0f;
+        private const float NativeMapPadding = 12.0f;
+        private const float NativeMapInnerSize = 188.0f;
+        private const float NativeStatusGap = 31.0f;
 
-        public static bool MinimapInitialized;
-        public static bool HudInitialized;
+        private static Vector2 s_baseStatusPosition = new Vector2(-271f, -45f);
+        private static Vector2 s_baseWindPosition = new Vector2(-78f, -78f);
+        private static bool s_minimapInitialized;
+        private static bool s_hudInitialized;
         private static bool s_capturedMinimapDefaults;
         private static bool s_capturedHudDefaults;
+
+        public static Vector2 BaseRootSize { get; private set; } = new Vector2(200f, 200f);
+        public static Vector2 BaseRootPosition { get; private set; } = new Vector2(-40f, -40f);
 
         public static void InitializeMinimap(Minimap minimapInstance)
         {
             if (!s_capturedMinimapDefaults)
             {
-                if (minimapInstance.m_smallRoot)
-                {
-                    RectTransform rootRectTransform = minimapInstance.m_smallRoot.GetComponent<RectTransform>();
-                    if (rootRectTransform)
-                    {
-                        BaseRootPosition = rootRectTransform.anchoredPosition;
-                        BaseRootSize = rootRectTransform.sizeDelta;
-                    }
-                }
-
-                if (minimapInstance.m_windMarker)
-                {
-                    BaseWindPosition = minimapInstance.m_windMarker.anchoredPosition;
-                }
+                RectTransform rootRectTransform = (RectTransform)minimapInstance.m_smallRoot.transform;
+                BaseRootPosition = rootRectTransform.anchoredPosition;
+                BaseRootSize = rootRectTransform.sizeDelta;
+                s_baseWindPosition = minimapInstance.m_windMarker.anchoredPosition;
 
                 s_capturedMinimapDefaults = true;
-                Plugin.LogDebug($"Minimap defaults captured: BaseRootSize={BaseRootSize}, BaseRootPosition={BaseRootPosition}, BaseWindPosition={BaseWindPosition}");
+                Plugin.LogDebug($"Minimap defaults captured: BaseRootSize={BaseRootSize}, BaseRootPosition={BaseRootPosition}, BaseWindPosition={s_baseWindPosition}");
             }
 
-            MinimapInitialized = true;
-            if (ModConfig.EnableMod.Value)
+            s_minimapInitialized = true;
+            if (ModConfig.Instance.EnableMod.Value)
             {
-                minimapInstance.SmallZoom = MinimapPatches.HardcodedDefaultZoom;
+                minimapInstance.SmallZoom = HardcodedDefaultZoom;
             }
             ApplyLayout();
         }
@@ -57,26 +49,60 @@ namespace MiniMapHeeler.Layout
         {
             if (!s_capturedHudDefaults)
             {
-                if (hudInstance.m_statusEffectListRoot)
-                {
-                    BaseStatusPosition = hudInstance.m_statusEffectListRoot.anchoredPosition;
-                }
+                s_baseStatusPosition = hudInstance.m_statusEffectListRoot.anchoredPosition;
                 ShipHudLayout.CaptureDefaults(hudInstance);
                 s_capturedHudDefaults = true;
-                Plugin.LogDebug($"HUD defaults captured: BaseStatusPosition={BaseStatusPosition}");
+                Plugin.LogDebug($"HUD defaults captured: BaseStatusPosition={s_baseStatusPosition}");
             }
 
-            HudInitialized = true;
+            s_hudInitialized = true;
             ApplyLayout();
         }
 
-        public static void UpdateViewportUv(Minimap minimapInstance, float innerWidth, float innerHeight, Vector3? centerWorldPosition = null)
+        // returns true to let the game setter run, false when the mod already set the zoom past the game clamp
+        public static bool HandleSmallZoomSet(Minimap minimapInstance, float value)
         {
-            if (!minimapInstance || !minimapInstance.m_mapImageSmall)
+            if (!ModConfig.Instance.EnableMod.Value)
             {
-                return;
+                return true;
             }
 
+            float current = minimapInstance.SmallZoom;
+
+            // the game zooms in at 0.5x but out at 1.5x so both directions use 1.5x here
+            bool isZoomIn = Mathf.Approximately(value, current * 0.5f);
+            bool isZoomOut = Mathf.Approximately(value, current * 1.5f);
+
+            if (isZoomIn)
+            {
+                float newZoom = Mathf.Clamp(current / 1.5f, HardcodedMinZoom, HardcodedMaxZoom);
+                minimapInstance.m_smallZoom = newZoom;
+                Plugin.LogDebug($"Zoom in: {current:F4} -> {newZoom:F4}");
+                return false;
+            }
+
+            if (isZoomOut)
+            {
+                float newZoom = Mathf.Clamp(current * 1.5f, HardcodedMinZoom, HardcodedMaxZoom);
+                minimapInstance.m_smallZoom = newZoom;
+                Plugin.LogDebug($"Zoom out: {current:F4} -> {newZoom:F4}");
+                return false;
+            }
+
+            minimapInstance.m_smallZoom = Mathf.Clamp(value, HardcodedMinZoom, HardcodedMaxZoom);
+            return false;
+        }
+
+        public static void HandleCenterMap(Minimap minimapInstance, Vector3 centerPoint)
+        {
+            if (ModConfig.Instance.EnableMod.Value && minimapInstance.m_mode == Minimap.MapMode.Small)
+            {
+                UpdateViewportUv(minimapInstance, GetInnerMapSize(), centerPoint);
+            }
+        }
+
+        private static void UpdateViewportUv(Minimap minimapInstance, Vector2 innerMapSize, Vector3? centerWorldPosition = null)
+        {
             Vector3 worldPosition = Vector3.zero;
             if (centerWorldPosition.HasValue)
             {
@@ -89,54 +115,39 @@ namespace MiniMapHeeler.Layout
             minimapInstance.WorldToMapPoint(worldPosition, out float mapPointX, out float mapPointY);
 
             Rect uvRectangle = minimapInstance.m_mapImageSmall.uvRect;
-            uvRectangle.width = minimapInstance.SmallZoom * (innerWidth / NativeMapInnerSize);
-            uvRectangle.height = minimapInstance.SmallZoom * (innerHeight / NativeMapInnerSize);
+            uvRectangle.width = minimapInstance.SmallZoom * (innerMapSize.x / NativeMapInnerSize);
+            uvRectangle.height = minimapInstance.SmallZoom * (innerMapSize.y / NativeMapInnerSize);
             uvRectangle.center = new Vector2(mapPointX, mapPointY);
             minimapInstance.m_mapImageSmall.uvRect = uvRectangle;
         }
 
         public static void ApplyLayout()
         {
-            if (!TryGetMinimapRoot(out RectTransform rootRectTransform))
+            // no restore here, that reset the minimap zoom every time the big map closed with the mod disabled
+            if (!ModConfig.Instance.EnableMod.Value || !TryGetMinimapRoot(out RectTransform rootRectTransform))
             {
                 return;
             }
 
-            if (!ModConfig.EnableMod.Value)
-            {
-                RestoreDefaults();
-                return;
-            }
-
-            float targetWidth = Mathf.Max(50f, ModConfig.MinimapWidth.Value);
-            float targetHeight = Mathf.Max(50f, ModConfig.MinimapHeight.Value);
-
-            rootRectTransform.sizeDelta = new Vector2(targetWidth, targetHeight);
+            Vector2 targetSize = new Vector2(ModConfig.Instance.MinimapWidth.Value, ModConfig.Instance.MinimapHeight.Value);
+            rootRectTransform.sizeDelta = targetSize;
             PlaceHudElements(rootRectTransform);
 
-            if (Minimap.instance.m_windMarker)
-            {
-                float mapHalfWidth = (targetWidth - NativeMapPadding) / 2f;
-                float mapHalfHeight = (targetHeight - NativeMapPadding) / 2f;
-                Minimap.instance.m_windMarker.anchoredPosition = new Vector2(
-                    -mapHalfWidth + 16f,
-                    -mapHalfHeight + 16f
-                );
-            }
+            Vector2 innerMapSize = GetInnerMapSize();
+            Minimap.instance.m_windMarker.anchoredPosition = new Vector2(
+                -innerMapSize.x / 2f + 16f,
+                -innerMapSize.y / 2f + 16f
+            );
 
-            float innerMapWidth = targetWidth - NativeMapPadding;
-            float innerMapHeight = targetHeight - NativeMapPadding;
-            UpdateViewportUv(Minimap.instance, innerMapWidth, innerMapHeight);
-
+            UpdateViewportUv(Minimap.instance, innerMapSize);
             Minimap.instance.m_pinUpdateRequired = true;
-            RefreshPins();
 
-            Plugin.LogDebug($"Layout applied: size=({targetWidth:F0}x{targetHeight:F0})");
+            Plugin.LogDebug($"Layout applied: size=({targetSize.x:F0}x{targetSize.y:F0})");
         }
 
         public static void ApplyPositions()
         {
-            if (ModConfig.EnableMod.Value && TryGetMinimapRoot(out RectTransform rootRectTransform))
+            if (ModConfig.Instance.EnableMod.Value && TryGetMinimapRoot(out RectTransform rootRectTransform))
             {
                 PlaceHudElements(rootRectTransform);
             }
@@ -144,8 +155,8 @@ namespace MiniMapHeeler.Layout
 
         private static void PlaceHudElements(RectTransform rootRectTransform)
         {
-            MinimapPlacementMode minimapPlacement = ModConfig.MinimapPlacement.Value;
-            ShipHudPlacementMode shipHudPlacement = ModConfig.ShipHudPlacement.Value;
+            MinimapPlacementMode minimapPlacement = ModConfig.Instance.MinimapPlacement.Value;
+            ShipHudPlacementMode shipHudPlacement = ModConfig.Instance.ShipHudPlacement.Value;
             bool shipHudShowing = HudLayoutTracker.ShipHudShowing;
 
             // detached measures from the screen top right corner, which is 0,0 in this space
@@ -156,7 +167,7 @@ namespace MiniMapHeeler.Layout
             if (minimapPlacement == MinimapPlacementMode.ShiftBelowStatusEffects && HudReady && HudLayoutTracker.StatusRowCount > 0)
             {
                 float statusRowsHeight = HudLayoutTracker.StatusRowCount * Hud.instance.m_statusEffectSpacing;
-                minimapPosition.y = BaseStatusPosition.y - statusRowsHeight - HardcodedStatusRowsGap;
+                minimapPosition.y = s_baseStatusPosition.y - statusRowsHeight - HardcodedStatusRowsGap;
             }
 
             if (shipHudShowing && shipHudPlacement == ShipHudPlacementMode.AboveMinimap)
@@ -165,7 +176,7 @@ namespace MiniMapHeeler.Layout
                 minimapPosition.y -= ShipHudLayout.GetScaledSize().y;
             }
 
-            rootRectTransform.anchoredPosition = minimapPosition + new Vector2(ModConfig.MinimapOffsetX.Value, ModConfig.MinimapOffsetY.Value);
+            rootRectTransform.anchoredPosition = minimapPosition + new Vector2(ModConfig.Instance.MinimapOffsetX.Value, ModConfig.Instance.MinimapOffsetY.Value);
 
             if (!HudReady)
             {
@@ -183,32 +194,11 @@ namespace MiniMapHeeler.Layout
                 ? statusEffectsRightEdge - NativeStatusGap
                 : BaseRootPosition.x;
 
-            if (Hud.instance.m_statusEffectListRoot)
-            {
-                Hud.instance.m_statusEffectListRoot.anchoredPosition = new Vector2(statusEffectsPositionX, BaseStatusPosition.y);
-            }
+            Hud.instance.m_statusEffectListRoot.anchoredPosition = new Vector2(statusEffectsPositionX, s_baseStatusPosition.y);
 
             Plugin.LogDebug(
                 $"HUD positions applied: minimap={rootRectTransform.anchoredPosition}, statusX={statusEffectsPositionX:F0}, " +
                 $"statusRows={HudLayoutTracker.StatusRowCount}, shipHudShowing={shipHudShowing}, minimapPlacement={minimapPlacement}");
-        }
-
-        public static void RefreshPins()
-        {
-            if (!MinimapInitialized || !Minimap.instance)
-            {
-                return;
-            }
-
-            try
-            {
-                Minimap.instance.UpdatePins();
-            }
-            catch (Exception exception)
-            {
-                Plugin.Log.LogWarning($"Failed to update minimap pins: {exception.Message}");
-                Plugin.LogDebug($"UpdatePins exception details: {exception}");
-            }
         }
 
         public static void RestoreDefaults()
@@ -217,38 +207,32 @@ namespace MiniMapHeeler.Layout
             {
                 rootRectTransform.sizeDelta = BaseRootSize;
                 rootRectTransform.anchoredPosition = BaseRootPosition;
-
-                if (Minimap.instance.m_windMarker)
-                {
-                    Minimap.instance.m_windMarker.anchoredPosition = BaseWindPosition;
-                }
+                Minimap.instance.m_windMarker.anchoredPosition = s_baseWindPosition;
 
                 Minimap.instance.SmallZoom = 0.01f;
-                UpdateViewportUv(Minimap.instance, NativeMapInnerSize, NativeMapInnerSize);
-
+                UpdateViewportUv(Minimap.instance, new Vector2(NativeMapInnerSize, NativeMapInnerSize));
                 Minimap.instance.m_pinUpdateRequired = true;
-                RefreshPins();
             }
 
             if (HudReady)
             {
-                if (Hud.instance.m_statusEffectListRoot)
-                {
-                    Hud.instance.m_statusEffectListRoot.anchoredPosition = BaseStatusPosition;
-                }
-
+                Hud.instance.m_statusEffectListRoot.anchoredPosition = s_baseStatusPosition;
                 ShipHudLayout.Restore(Hud.instance);
             }
 
-            Plugin.LogDebug("Restored native minimap and HUD layout defaults.");
+            Plugin.LogDebug("Restored base game minimap and HUD layout defaults.");
         }
 
-        private static bool HudReady => HudInitialized && Hud.instance;
+        private static Vector2 GetInnerMapSize() => new Vector2(
+            ModConfig.Instance.MinimapWidth.Value - NativeMapPadding,
+            ModConfig.Instance.MinimapHeight.Value - NativeMapPadding);
+
+        private static bool HudReady => s_hudInitialized && Hud.instance;
 
         private static bool TryGetMinimapRoot(out RectTransform rootRectTransform)
         {
             rootRectTransform = null!;
-            return MinimapInitialized && Minimap.instance && Minimap.instance.m_smallRoot.TryGetComponent(out rootRectTransform);
+            return s_minimapInitialized && Minimap.instance && Minimap.instance.m_smallRoot.TryGetComponent(out rootRectTransform);
         }
     }
 }

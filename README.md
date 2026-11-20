@@ -96,6 +96,7 @@ You can also find and message DreamWraith on these Valheim Discord servers:
 
 - [**WispTorchHeeler**](https://thunderstore.io/c/valheim/p/DreamWraith/WispTorchHeeler/): Tiered Mistlands wisp torches and lamps with expanded mist clearance, torch painting, and Wisplight customization.
 - [**PersonalChestHeeler**](https://thunderstore.io/c/valheim/p/DreamWraith/PersonalChestHeeler/): Tiered personal locked storage chests with server-synced capacity and crafting recipes.
+- [**PlantBiomeHeeler**](https://thunderstore.io/c/valheim/p/DreamWraith/PlantBiomeHeeler/): Terrain overlay and HUD that show which biome a crop or sapling actually gets, with two-tone borders and optional hatch lines.
 
 ### HUD
 

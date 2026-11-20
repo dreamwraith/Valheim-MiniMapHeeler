@@ -35,11 +35,11 @@ namespace MiniMapHeeler.Layout
         }
 
         public static Vector2 GetScaledSize() =>
-            GetGroupRect(GetWindIndicatorCenter(ModConfig.ShipHudPlacement.Value)).size * ModConfig.ShipHudScale.Value;
+            GetGroupRect(GetWindIndicatorCenter(ModConfig.Instance.ShipHudPlacement.Value)).size * ModConfig.Instance.ShipHudScale.Value;
 
         public static Rect Apply(Hud hudInstance, RectTransform minimapRectTransform)
         {
-            ShipHudPlacementMode placement = ModConfig.ShipHudPlacement.Value;
+            ShipHudPlacementMode placement = ModConfig.Instance.ShipHudPlacement.Value;
             Vector2 windIndicatorCenter = GetWindIndicatorCenter(placement);
             Rect groupRect = GetGroupRect(windIndicatorCenter);
 
@@ -68,8 +68,8 @@ namespace MiniMapHeeler.Layout
                     Rect.NormalizedToPoint(baseMinimapRect, BottomCenter))
             };
 
-            Vector2 target = anchorPoint + new Vector2(ModConfig.ShipHudOffsetX.Value, ModConfig.ShipHudOffsetY.Value);
-            float scale = ModConfig.ShipHudScale.Value;
+            Vector2 target = anchorPoint + new Vector2(ModConfig.Instance.ShipHudOffsetX.Value, ModConfig.Instance.ShipHudOffsetY.Value);
+            float scale = ModConfig.Instance.ShipHudScale.Value;
             Vector2 speedIconPosition = target + (s_baseSpeedIconPosition - groupPoint) * scale;
             Vector2 windIndicatorPosition = target + (windIndicatorCenter - groupPoint) * scale;
 
